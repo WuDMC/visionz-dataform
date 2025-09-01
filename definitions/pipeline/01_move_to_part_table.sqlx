@@ -1,0 +1,27 @@
+config {
+  type: "operations",
+  hasOutput: false,  // потому что это не CREATE TABLE/VIEW
+  name: "merge_msgs",
+  tags: ["daily"],
+  dependencies: ['dedup_raw_v4']
+}
+
+MERGE INTO ${ref('part_messages')} AS target
+USING (
+  SELECT * FROM ${ref('messages_raw_v4')}
+  WHERE ts > (
+    SELECT TIMESTAMP_SUB(MAX(ts), INTERVAL 7 DAY)
+    FROM ${ref('part_messages')}
+  )
+) AS source
+ON target.id = source.id AND target.chat_id = source.chat_id
+
+WHEN MATCHED AND NOT source.empty THEN
+  UPDATE SET
+    text = source.text,
+    ts = source.ts
+WHEN NOT MATCHED THEN
+  INSERT (id, empty, text, datetime, date, link, sender_chat_id, sender_chat_user_name, user, user_name, chat_id, ts)
+  VALUES (id, empty, text, datetime, date, link, sender_chat_id, sender_chat_user_name, user, user_name, chat_id, ts);
+
+

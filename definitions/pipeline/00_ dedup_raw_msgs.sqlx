@@ -1,0 +1,26 @@
+config {
+  type: "operations",
+  hasOutput: false,
+  name: "dedup_raw_v4",
+  tags: ["dedup"]
+}
+
+DELETE FROM ${ref('messages_raw_v4')} t
+WHERE EXISTS (
+  SELECT 1
+  FROM (
+    SELECT
+      id,
+      chat_id,
+      ts,
+      ROW_NUMBER() OVER (
+        PARTITION BY id, chat_id
+        ORDER BY NOT empty DESC, ts DESC
+      ) AS row_num
+    FROM ${ref('messages_raw_v4')}
+  ) sub
+  WHERE sub.row_num > 1
+    AND sub.id = t.id
+    AND sub.chat_id = t.chat_id
+    AND sub.ts = t.ts
+);

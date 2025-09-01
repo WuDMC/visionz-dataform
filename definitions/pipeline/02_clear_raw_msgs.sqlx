@@ -1,0 +1,11 @@
+config {
+  type: "operations",
+  hasOutput: false,  
+  name: "clear_raw_msg",
+  tags: ["daily"],
+  dependencies: ["merge_msgs"]
+}
+
+
+DELETE FROM ${ref('messages_raw_v4')}
+WHERE ts < TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH));

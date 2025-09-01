@@ -1,0 +1,5 @@
+defaultProject: geo-roulette
+defaultDataset: dwh_de_jobs
+defaultAssertionDataset: dwh_de_jobs_assertions
+dataformCoreVersion: 3.0.26
+defaultLocation: europe-west1
