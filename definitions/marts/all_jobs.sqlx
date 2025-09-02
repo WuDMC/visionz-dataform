@@ -1,0 +1,83 @@
+config {
+    schema: "marts",
+    type: "incremental",
+    name: "all_jobs",
+    tags: ['incremental'],
+
+}
+
+WITH msgs_with_role AS (
+    SELECT
+        ts,
+        date,
+        link,
+        REGEXP_REPLACE(link, '/[^/]+$', '') as channel,
+        COALESCE(r.role_name, 'unknown') AS role_name,  -- Assign 'unknown' if no role is found
+        text
+    FROM 
+    -- if incremental use raw msg table with TTL 3 months and if not use full part table
+        ${ when(incremental(), ref('messages_raw_v4'), ref('part_messages')) } t
+    LEFT JOIN
+        ${ref('roles_regex')} r ON REGEXP_CONTAINS(LOWER(t.text),r.role_regex)
+    WHERE
+        empty IS NOT NULL 
+        AND text IS NOT NULL 
+        AND text != ''
+        ${ when(incremental(), `AND ts > (SELECT MAX(ts) FROM ${self()})`) }
+),
+tech_matches AS (
+    SELECT
+        t.ts,
+        t.date,
+        t.link,
+        t.channel,
+        t.role_name,
+        r.technology_name,
+        REGEXP_CONTAINS(LOWER(t.text), CONCAT(r'\b(', r.technology_regex, r')\b')) AS tech_found,
+        t.text
+    FROM 
+        msgs_with_role t
+    CROSS JOIN 
+    ${ref('technologies_regex')} r
+        WHERE
+        REGEXP_CONTAINS(LOWER(t.text), CONCAT(r'\b(', r.technology_regex, r')\b'))  -- Only matching technologies
+),
+lang_matches AS (
+    SELECT
+        t.ts,
+        t.date,
+        t.link,
+        t.channel,
+        t.role_name,
+        l.technology_name AS language_name,
+        REGEXP_CONTAINS(LOWER(t.text), CONCAT(r'\b(', l.technology_regex, r')\b')) AS lang_found,
+        t.text
+    FROM 
+        msgs_with_role t
+    CROSS JOIN 
+        ${ref('languages_regex')} l
+    WHERE
+        REGEXP_CONTAINS(LOWER(t.text), CONCAT(r'\b(', l.technology_regex, r')\b'))  -- Only matching languages
+)
+SELECT
+    m.ts,
+    m.date,
+    m.link,
+    m.channel,
+    ARRAY_AGG(DISTINCT COALESCE(m.role_name, 'unknown')) AS roles,  -- Array of unique role names, default to 'unknown'
+    ARRAY_AGG(DISTINCT m.technology_name) AS tags,
+    ARRAY_AGG(DISTINCT IF(l.language_name IS NOT NULL, l.language_name, 'Not specified')) AS lang_tags,
+    m.text  -- Include the text column in the final output
+FROM 
+    tech_matches m
+LEFT JOIN
+    lang_matches l ON m.ts = l.ts AND m.link = l.link
+WHERE 
+    m.tech_found = TRUE OR l.lang_found = TRUE
+GROUP BY 
+    m.ts, m.date, m.link, m.channel, m.text
+
+
+-- ${ when(incremental(), `WHERE ts > (select max(date) FROM ${self()})`)
+
+    
