@@ -1,0 +1,24 @@
+config {
+    type: "incremental",
+    name: "embedding_data_jobs",
+    tags: ['incremental', 'embedding'],
+    dependencies: ["merge_msgs"]
+
+}
+
+SELECT
+  *
+FROM
+  ML.GENERATE_EMBEDDING( MODEL ${ref('embedding')},
+    (
+    SELECT
+      text AS content,
+      link,
+      ts
+    FROM
+      ${ref('data_jobs')} ${when(incremental(), `WHERE link not in (SELECT DISTINCT(link) FROM ${self()}) OR ts > (SELECT MAX(ts) FROM ${self()})`)}
+    LIMIT
+      100 ),
+    STRUCT( TRUE AS flatten_json_output,
+      'SEMANTIC_SIMILARITY' AS task_type,
+      768 AS output_dimensionality ) )

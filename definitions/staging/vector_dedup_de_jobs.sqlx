@@ -1,0 +1,63 @@
+config {
+  type: "table",
+  name: "vector_dedup_de_jobs",
+  tags: ["deduplication"]
+}
+
+WITH base AS (
+  SELECT *
+  FROM `geo-roulette.dwh_de_jobs.embedding_data_jobs`
+),
+
+pairs AS (
+  SELECT
+    a.link AS link_a,
+    b.link AS link_b,
+    COSINE_DISTANCE(a.ml_generate_embedding_result, b.ml_generate_embedding_result) AS similarity
+  FROM base a
+  JOIN base b
+    ON a.link < b.link
+  WHERE TRUE
+),
+
+-- Пары, где similarity < 0.03 → потенциальные дубликаты
+dedup_candidates AS (
+  SELECT *
+  FROM pairs
+  WHERE similarity < 0.03
+),
+
+-- Группы дубликатов: каждая строка получает свой "канонический" линк
+grouped AS (
+  SELECT
+    link_b AS duplicate,
+    link_a AS canonical,
+    similarity,
+    ROW_NUMBER() OVER (PARTITION BY link_b ORDER BY similarity) AS rn
+  FROM dedup_candidates
+),
+
+-- Оставляем по одному канону на дубликат
+resolved_groups AS (
+  SELECT *
+  FROM grouped
+  WHERE rn = 1
+),
+
+final AS (
+  SELECT
+    e.link,
+    e.ts,
+    e.content,
+    e.ml_generate_embedding_result,
+    CASE
+      WHEN g.duplicate IS NULL THEN FALSE
+      ELSE TRUE
+    END AS is_duplicate,
+    g.canonical AS canonical_link
+  FROM base e
+  LEFT JOIN resolved_groups g
+    ON e.link = g.duplicate
+)
+
+SELECT * FROM final

@@ -1,0 +1,29 @@
+
+config {
+    type: "incremental",
+    name: "data_jobs",
+    tags: ['incremental'],
+    dependencies: ["merge_msgs"]
+
+}
+
+js {
+  const trashRegex = '(?:подборка|bootcamp|меня зовут|my name|вебинар|буткемп|webinar|прокачайтесь|курс\b|skillbox|гайд|реклама|карьерный план|#резюме|#resume|#cv|отправлю резюме)[^\n]*'
+  const dataJobRegex = '(dataops|data\s*[)-–—]*\s*op|dwh\s*[)-–—]*\s*engineer|data\s*[)-–—]*\s*engineer|дата\s*[)-–—]*\s*инженер|инженер\s*[)-–—]*\s*данных|инженер\s*[)-–—]*\s*по\s*[)-–—]*\s*данным|data\s*[)-–—]*\s*инженер|data\s*[)-–—]*\s*engineer|dataengineer|data.*python|data.*ruby|data\s*[)-–—]*\s*software|software\s*[)-–—]*\s*data|data\s*[)-–—]*\s*analyst|marketing\s*[)-–—]*\s*analyst|data\s*[)-–—]*\s*аналитик|engineering\s*[)-–—]*\s*analyst|analytics\s*[)-–—]*\s*engineer)';
+}
+
+SELECT
+    ts,
+    date,
+    link,
+    text,
+    TRUE AS is_data_job
+FROM 
+    ${ref('messages_raw_v4')} t
+WHERE
+    empty IS NOT NULL 
+    AND text IS NOT NULL 
+    AND text != ''
+    ${ when(incremental(), `AND ts > (SELECT MAX(ts) FROM ${self()})`) }
+    AND NOT REGEXP_CONTAINS(LOWER(text), r"""${trashRegex}""") 
+    AND REGEXP_CONTAINS(LOWER(text), r"""${dataJobRegex}""") 
