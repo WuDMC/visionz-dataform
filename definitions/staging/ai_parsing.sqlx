@@ -1,7 +1,7 @@
 config {
     type: "incremental",
     name: "ai_parsed_data_psoitions",
-    tags: ['incremental'],
+    tags: ['ia'],
     dependencies: ["merge_msgs"]
 
 }
@@ -26,7 +26,7 @@ FROM AI.GENERATE_TABLE(
        `)}
 
     ORDER BY ts
-    LIMIT 100
+    LIMIT 2
   ), 
   STRUCT("position_name STRING, avg_monthly_salary_usd INT64, company_name STRING, technology_stack ARRAY<STRING>"
         AS output_schema, 8192 AS max_output_tokens))
