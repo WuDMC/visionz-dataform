@@ -16,7 +16,14 @@ FROM
       link,
       ts
     FROM
-      ${ref('data_jobs')} ${when(incremental(), `WHERE link not in (SELECT DISTINCT(link) FROM ${self()}) OR ts > (SELECT MAX(ts) FROM ${self()})`)}
+      ${ref('data_jobs')} data_jobs
+       ${when(incremental(), `
+       WHERE NOT EXISTS (
+        SELECT 1
+        FROM ${self()}
+        WHERE ${self()}.link = data_jobs.link
+            AND ${self()}.ts >= data_jobs.ts)
+       `)}
     LIMIT
       100 ),
     STRUCT( TRUE AS flatten_json_output,
