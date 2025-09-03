@@ -58,6 +58,23 @@ final AS (
   FROM base e
   LEFT JOIN resolved_groups g
     ON e.link = g.duplicate
+),
+
+with_canonical_text AS (
+  SELECT
+    f.*,
+    b.content AS canonical_text
+  FROM final f
+  LEFT JOIN base b
+    ON f.canonical_link = b.link
 )
 
-SELECT * FROM final
+SELECT
+  link,
+  canonical_link,
+  content AS text,
+  canonical_text,
+  is_duplicate,
+  ts
+FROM with_canonical_text
+-- WHERE is_duplicate
