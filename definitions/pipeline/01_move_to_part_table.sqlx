@@ -6,14 +6,19 @@ config {
   dependencies: ['dedup_raw_v4']
 }
 
+js {
+const partitionFilterDate = `DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)`;
+}
+
+
 MERGE INTO ${ref('part_messages')} AS target
 USING (
   SELECT * FROM ${ref('messages_raw_v4')}
 ) AS source
 ON target.id = source.id 
 AND target.chat_id = source.chat_id
-AND target.date >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
-AND source.ts > TIMESTAMP(DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH))
+AND target.date >= ${partitionFilterDate}
+AND source.ts > TIMESTAMP(${partitionFilterDate})
 WHEN  MATCHED AND NOT source.empty THEN
   UPDATE SET
     text = source.text,
