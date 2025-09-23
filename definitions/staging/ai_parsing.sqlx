@@ -1,6 +1,6 @@
 config {
     type: "incremental",
-    name: "ai_parsed_data_psoitions",
+    name: "ai_parsed_data_positions",
     tags: ['ia'],
     dependencies: ["merge_msgs"]
 
