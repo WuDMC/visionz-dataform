@@ -1,0 +1,8 @@
+config {
+    type: "view",
+    name: "de_regex"
+}
+
+SELECT role_regex from
+${ref('roles_regex')} 
+where role_name = 'DataEngineer'

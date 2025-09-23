@@ -1,0 +1,12 @@
+config {
+    schema: "marts",
+    type: "view",
+    name: "ai_data_jobs"
+}
+
+select * FROM ${ref('ai_parsed_data_positions')}
+where position_name is not null
+AND REGEXP_CONTAINS(
+    LOWER(position_name), 
+          r'(данн|дата|data|sql|ml|ai|аналитик|analyst|dwh|dataops|scientist|сайентист|intelligence|analytics)'
+  )
