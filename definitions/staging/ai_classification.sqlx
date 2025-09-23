@@ -1,7 +1,7 @@
 config {
     type: "incremental",
     name: "ai_classification",
-    tags: ['ia'],
+    tags: ['ia', 'incremental'],
 
 }
 
