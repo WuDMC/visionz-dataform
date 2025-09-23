@@ -1,7 +1,7 @@
 config {
     type: "incremental",
     name: "ai_parsed_data_positions",
-    tags: ['ia'],
+    tags: ['ia', 'incremental'],
 
 }
 
