@@ -2,7 +2,6 @@ config {
     type: "incremental",
     name: "ai_parsed_data_positions",
     tags: ['ia'],
-    dependencies: ["merge_msgs"]
 
 }
 
@@ -11,18 +10,17 @@ FROM AI.GENERATE_TABLE(
   MODEL ${ref('ai_parse_msg')},
   (
     SELECT
-      text AS prompt,
+      original_text AS prompt,
       link,
       ts
-    FROM ${ref('vector_dedup_de_jobs')} vd
-    WHERE
-      NOT is_duplicate
+    FROM ${ref('ai_classification')} ac
+    WHERE message_type = 'job_posting'
        ${when(incremental(), `
        AND NOT EXISTS (
         SELECT 1
         FROM ${self()}
-        WHERE ${self()}.link = vd.link
-            AND ${self()}.ts >= vd.ts)
+        WHERE ${self()}.link = ac.link
+            AND ${self()}.ts >= ac.ts)
        `)}
 
     ORDER BY ts

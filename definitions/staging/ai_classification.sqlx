@@ -1,0 +1,48 @@
+config {
+    type: "incremental",
+    name: "ai_classification",
+    tags: ['ia'],
+
+}
+
+SELECT *
+FROM AI.GENERATE_TABLE(
+  MODEL ${ref('ai_parse_msg')},
+  (
+    SELECT
+      CONCAT(
+        "Classify this message from IT job channel into one of three categories:\n\n",
+        "INSTRUCTIONS:\n",
+        "- 'job_posting' - if this is a specific job opening with requirements/conditions\n",
+        "- 'job_collection' - if this is a post with multiple job listings or links to jobs\n",
+        "- 'spam' - if this is course advertising, personal resumes, bare links without description, spam, or not related to job search\n\n",
+        "EXAMPLES:\n",
+        "'job_posting': 'We are looking for Data Engineer at company X. Requirements: Python, SQL...'\n",
+        "'job_collection': 'Today's top 5 Data Engineer positions: 1) Company A... 2) Company B...'\n",
+        "'spam': 'Learn Data Science in 3 months! Use promo code...'\n\n",
+        "RULES:\n",
+        "- Look for company names, specific requirements, salary ranges → job_posting\n",
+        "- Look for multiple companies/positions in one post → job_collection\n",
+        "- Look for course ads, personal CVs, bare links, unrelated content → spam\n",
+        "- Respond with ONLY the category name in lowercase\n\n",
+        "MESSAGE TO CLASSIFY:\n",
+        text
+      ) AS prompt,
+      text as original_text,
+      link,
+      ts
+    FROM ${ref('vector_dedup_de_jobs')} vd
+    WHERE
+      NOT is_duplicate
+       ${when(incremental(), `
+       AND NOT EXISTS (
+        SELECT 1
+        FROM ${self()}
+        WHERE ${self()}.link = vd.link
+            AND ${self()}.ts >= vd.ts)
+       `)}
+    ORDER BY ts
+    LIMIT 4
+  ), 
+  STRUCT("message_type STRING" AS output_schema, 8192 AS max_output_tokens)
+) 

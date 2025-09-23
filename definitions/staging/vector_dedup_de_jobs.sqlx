@@ -6,7 +6,7 @@ config {
 
 WITH base AS (
   SELECT *
-  FROM `geo-roulette.dwh_de_jobs.embedding_data_jobs`
+  FROM ${ref('embedding_data_jobs')}
 ),
 
 pairs AS (
