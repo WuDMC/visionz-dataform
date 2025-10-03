@@ -1,30 +1,32 @@
 config {
-  type: "operations",
-  hasOutput: false,  // потому что это не CREATE TABLE/VIEW
-  name: "merge_msgs",
-  tags: ["daily"],
-  dependencies: ['dedup_raw_v4']
+    type: "incremental",
+    name: "part_messages",
+    uniqueKey: ["id", "chat_id"],
+    bigquery: {
+        partitionBy: "DATE_TRUNC(date, MONTH)",
+        clusterBy: ["chat_id"],
+        updatePartitionFilter: `date >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)`
+    },
+    tags: ["daily"],
+    dependencies: ['dedup_raw_v4']
 }
 
-js {
-const partitionFilterDate = `DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)`;
-}
+SELECT 
+  id, 
+  empty, 
+  text, 
+  datetime, 
+  date, 
+  link, 
+  sender_chat_id, 
+  sender_chat_user_name, 
+  user, 
+  user_name, 
+  chat_id, 
+  ts
+FROM ${ref('messages_raw_v4')}
 
-
-MERGE INTO ${ref('part_messages')} AS target
-USING (
-  SELECT * FROM ${ref('messages_raw_v4')}
-) AS source
-ON target.id = source.id 
-AND target.chat_id = source.chat_id
-AND target.date >= ${partitionFilterDate}
-AND source.ts > TIMESTAMP(${partitionFilterDate})
-WHEN  MATCHED AND NOT source.empty THEN
-  UPDATE SET
-    text = source.text,
-    ts = source.ts
-WHEN NOT MATCHED THEN
-  INSERT (id, empty, text, datetime, date, link, sender_chat_id, sender_chat_user_name, user, user_name, chat_id, ts)
-  VALUES (id, empty, text, datetime, date, link, sender_chat_id, sender_chat_user_name, user, user_name, chat_id, ts);
-
-
+-- Фильтр для инкрементальной загрузки
+${when(incremental(), `
+WHERE ts > TIMESTAMP(DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH))
+`)}

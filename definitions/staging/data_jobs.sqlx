@@ -3,7 +3,7 @@ config {
     type: "incremental",
     name: "data_jobs",
     tags: ['incremental'],
-    dependencies: ["merge_msgs"]
+    dependencies: ["part_messages"]
 
 }
 
