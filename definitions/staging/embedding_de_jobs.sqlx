@@ -2,7 +2,7 @@ config {
     type: "incremental",
     name: "embedding_data_jobs",
     tags: ['incremental', 'embedding'],
-    dependencies: ["merge_msgs"]
+    dependencies: ["part_messages"]
 
 }
 

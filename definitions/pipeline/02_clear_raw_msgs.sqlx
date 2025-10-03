@@ -3,7 +3,7 @@ config {
   hasOutput: false,  
   name: "clear_raw_msg",
   tags: ["daily"],
-  dependencies: ["merge_msgs"]
+  dependencies: ["part_messages"]
 }
 
 

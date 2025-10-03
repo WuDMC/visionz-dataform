@@ -4,11 +4,11 @@ declare ({
   name: "messages_raw_v4"
 })
 
-// partitioned by month
-declare ({
-  schema: "tg_jobs",
-  name: "part_messages"
-})
+// partitioned by month - deleted
+// declare ({
+//   schema: "tg_jobs",
+//   name: "part_messages"
+// })
 
 declare ({
   schema: "tg_jobs",
